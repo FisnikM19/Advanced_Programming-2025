@@ -1,7 +1,6 @@
-package exercises_courses.task8;
+package exercises_courses.task9;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -14,42 +13,38 @@ class NonExistingItemException extends Exception {
 }
 
 abstract class Archive {
-
     protected int id;
-    protected Date dateArchived;
+    protected LocalDate dateArchived;
 
     public Archive(int id) {
         this.id = id;
+        this.dateArchived = LocalDate.now();
     }
 
     public int getId() {
         return id;
     }
 
-    public Date getDateArchived() {
-        return dateArchived;
-    }
-
-    public void setDateArchived(Date dateArchived) {
+    public void setDateArchived(LocalDate dateArchived) {
         this.dateArchived = dateArchived;
     }
 }
 
 class LockedArchive extends Archive {
-    private Date dateToOpen;
 
-    public LockedArchive(int id, Date dateToOpen) {
+    private LocalDate dateToOpen;
+
+    public LockedArchive(int id, LocalDate dateToOpen) {
         super(id);
         this.dateToOpen = dateToOpen;
     }
 
-    public Date getDateToOpen() {
+    public LocalDate getDateToOpen() {
         return dateToOpen;
     }
 }
 
 class SpecialArchive extends Archive {
-
     private int maxOpen;
     private int openCount;
 
@@ -63,31 +58,31 @@ class SpecialArchive extends Archive {
         return maxOpen;
     }
 
-    public int getOpenCount() {
-        return openCount;
-    }
-
     public void incrementOpenCount() {
         openCount++;
+    }
+
+    public int getOpenCount() {
+        return openCount;
     }
 }
 
 class ArchiveStore {
-    private List<Archive> archives;
-    private StringBuilder logs;
+    List<Archive> archives;
+    StringBuilder logs;
 
-    public ArchiveStore(){
-        archives = new ArrayList<>();
+    public ArchiveStore() {
+        this.archives = new ArrayList<>();
         logs = new StringBuilder();
     }
 
-    public void archiveItem(Archive item, Date date) {
+    public void archiveItem(Archive item, LocalDate date) {
         item.setDateArchived(date);
         archives.add(item);
-        logs.append(String.format("Item %d archived at %s%n", item.getId(), date));
+        logs.append(String.format("Item %d archived at %s%n", item.id, date));
     }
 
-    public void openItem(int id, Date date) throws NonExistingItemException {
+    public void openItem(int id, LocalDate date) throws NonExistingItemException {
         Archive foundArchive = null;
 
         // Find the archive with the given id
@@ -98,21 +93,16 @@ class ArchiveStore {
             }
         }
 
-        // If not found, throw exception
-        if (foundArchive == null) {
-            throw new NonExistingItemException(id);
-        }
+        if (foundArchive == null) throw new NonExistingItemException(id);
 
-        // Check if it's a LockedArchive
         if (foundArchive instanceof LockedArchive) {
             LockedArchive lockedArchive = (LockedArchive) foundArchive;
-            if (date.before(lockedArchive.getDateToOpen())) {
+            if (date.isBefore(lockedArchive.getDateToOpen())) {
                 logs.append(String.format("Item %d cannot be opened before %s%n", id, lockedArchive.getDateToOpen()));
                 return;
             }
         }
 
-        // Check if it's a SpecialArchive
         if (foundArchive instanceof SpecialArchive) {
             SpecialArchive specialArchive = (SpecialArchive) foundArchive;
             if (specialArchive.getOpenCount() >= specialArchive.getMaxOpen()) {
@@ -122,9 +112,7 @@ class ArchiveStore {
             specialArchive.incrementOpenCount();
         }
 
-        // If all checks pass, log the opening
         logs.append(String.format("Item %d opened at %s%n", id, date));
-
     }
 
     public String getLog() {
@@ -132,16 +120,10 @@ class ArchiveStore {
     }
 }
 
-
-
 public class ArchiveStoreTest {
     public static void main(String[] args) {
         ArchiveStore store = new ArchiveStore();
-        // Date date = new Date(113, 10, 7); -> ne proaga vo code runner-ot
-        LocalDate localDate = LocalDate.of(2013, 11, 7);
-        Date date = Date.from(localDate.atStartOfDay(ZoneId.of("UTC")).toInstant());
-
-
+        LocalDate date = LocalDate.of(2013, 10, 7);
         Scanner scanner = new Scanner(System.in);
         scanner.nextLine();
         int n = scanner.nextInt();
@@ -151,8 +133,8 @@ public class ArchiveStoreTest {
         for (i = 0; i < n; ++i) {
             int id = scanner.nextInt();
             long days = scanner.nextLong();
-            Date dateToOpen = new Date(date.getTime() + (days * 24 * 60
-                    * 60 * 1000));
+
+            LocalDate dateToOpen = date.atStartOfDay().plusSeconds(days * 24 * 60 * 60).toLocalDate();
             LockedArchive lockedArchive = new LockedArchive(id, dateToOpen);
             store.archiveItem(lockedArchive, date);
         }
@@ -169,10 +151,8 @@ public class ArchiveStoreTest {
         }
         scanner.nextLine();
         scanner.nextLine();
-        String openingLine = scanner.nextLine();
-        String[] openItems = openingLine.trim().split("\\s+");
-        for (String item : openItems) {
-            int open = Integer.parseInt(item);
+        while(scanner.hasNext()) {
+            int open = scanner.nextInt();
             try {
                 store.openItem(open, date);
             } catch(NonExistingItemException e) {

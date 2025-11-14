@@ -14,7 +14,7 @@ class FileNameExistsException extends Exception {
 interface IFile {
     String getFileName();
     long getFileSize();
-    String getFileInfo();
+    String getFileInfo(int i);
     void sortBySize();
     double findLargestFile();
 }
@@ -40,8 +40,17 @@ class File implements IFile {
     }
 
     @Override
-    public String getFileInfo() {
-        return String.format("File name: %10s File size: %10d", name, size);
+    public String getFileInfo(int n) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+            // \t doesn't work :(
+            sb.append("    ");
+        }
+        sb.append(String.format(
+                "File name: %10s File size: %10s\n",
+                name, size
+        ));
+        return sb.toString();
     }
 
     @Override
@@ -89,21 +98,21 @@ class Folder implements IFile {
     }
 
     @Override
-    public String getFileInfo() {
+    public String getFileInfo(int n) {
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Folder name: %10s Folder size: %10d\n", name, getFileSize()));
-
-        // Print all files/subfolders with indentation
-        for (IFile file: files) {
-            String fileInfo = file.getFileInfo();
-            // Split by lines and add tab to each
-            for (String line: fileInfo.split("\n")) {
-                sb.append("\t").append(line).append("\n");
-            }
+        for (int i = 0; i < n; i++) {
+            sb.append("    ");
         }
-
+        sb.append(String.format(
+                "Folder name: %10s Folder size: %10s\n",
+                name, this.getFileSize()
+        ));
+        for (IFile file: files){
+            sb.append(file.getFileInfo(n + 1));
+        }
         return sb.toString();
     }
+
 
     @Override
     public void sortBySize() {
@@ -148,7 +157,7 @@ class FileSystem {
 
     @Override
     public String toString() {
-        return rootDirectory.getFileInfo();
+        return rootDirectory.getFileInfo(0);
     }
 }
 
