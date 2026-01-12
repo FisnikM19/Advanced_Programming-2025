@@ -1,107 +1,101 @@
 package labs.lab9.task1;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 class DocumentViewer {
 
-    Map<String, List<String>> documentsMap;
-
+    Map<String, List<String>> documents;
     public DocumentViewer() {
-        documentsMap = new LinkedHashMap<>();
+        documents = new HashMap<>();
     }
 
     public void addDocument(String id, String text) {
-        if (!documentsMap.containsKey(id)) {
-            documentsMap.computeIfAbsent(id, k -> new ArrayList<>()).add(text);
-        } else {
-            List<String> texts = documentsMap.get(id);
-            texts.add(text);
-            documentsMap.put(id, texts);
-        }
+        // Alternative 1
+//        documents.putIfAbsent(id, new ArrayList<>());
+//        documents.get(id).add(text);
+
+        // Alternative 2
+        documents.computeIfAbsent(id, k -> new ArrayList<>()).add(text);
     }
 
     public void enableLineNumbers(String id) {
 
-        if (documentsMap.containsKey(id)) {
-            List<String> lines = documentsMap.get(id);
+        if (documents.containsKey(id)) {
+            List<String> lines = documents.get(id);
             List<String> numberedLines = new ArrayList<>();
 
             for (int i = 0; i < lines.size(); i++) {
-                numberedLines.add((i+1) + ": " + lines.get(i));
+                numberedLines.add(i+1 + ": " + lines.get(i));
             }
 
-            documentsMap.put(id, numberedLines);
+            documents.put(id, numberedLines);
         }
     }
 
     public void enableWordCount(String id) {
-        List<String> texts = documentsMap.get(id);
-        int totalWords = 0;
-        for (String text: texts) {
-            String[] parts = text.split("\\s+");
-            totalWords += parts.length;
-        }
+        List<String> lines = documents.get(id);
+        if (lines == null || lines.isEmpty()) return;
 
-        String newLine = "Words: " + totalWords;
-        texts.add(newLine);
+//        int count = 0;
+//        for (String text: lines) {
+//            String[] parts = text.split("\\s+");
+//            count += parts.length;
+//        }
 
-        documentsMap.put(id, texts);
+        // Alternative 2
+        int count = lines.stream()
+                        .mapToInt(line -> line.split("\\s+").length)
+                                .sum();
+
+        lines.add("Words: " + count);
     }
 
     public void enableRedaction(String id, List<String> forbiddenWords) {
-        if (documentsMap.containsKey(id)) {
-            List<String> texts = documentsMap.get(id);
-            List<String> refactoredLines = new ArrayList<>();
+        List<String> lines = documents.get(id);
+        List<String> newLines = new ArrayList<>();
 
-            for (String text: texts) {
-                String[] parts = text.split("\\s+");
 
-                boolean flag = false;
-                for (int i = 0; i < parts.length; i++) {
-                    if (forbiddenWords.contains(parts[i]) || forbiddenWords.contains(parts[i].toLowerCase())) {
-                        parts[i] = "*";
-                        flag = true;
-                    }
-                }
-
-                if (flag) {
-                    String newText = "";
-                    for (int i = 0; i < parts.length; i++) {
-                        newText += parts[i] + " ";
-                    }
-                    refactoredLines.add(newText);
-                } else {
-                    refactoredLines.add(text);
-                }
+        for (String line: lines) {
+            List<String> words = new ArrayList<>();
+            String[] parts = line.split("\\s+");
+            for (int i = 0; i < parts.length; i++) {
+                if (forbiddenWords.contains(parts[i].toLowerCase()) || forbiddenWords.contains(parts[i]))
+                    words.add("*");
+                else
+                    words.add(parts[i]);
             }
-            documentsMap.put(id, refactoredLines);
+            String l = String.join(" ", words);
+            newLines.add(l);
         }
+        documents.put(id, newLines);
     }
 
     public void display(String id) {
+        List<String> texts = documents.get(id);
 
-        System.out.println("=== Document " + id + " ===");
-        List<String> texts = documentsMap.get(id);
+        System.out.printf("=== Document %s ===\n", id);
         for (String text: texts) {
             System.out.println(text);
         }
-    }
 
+    }
 }
 
 public class DocumentViewerTest {
     public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        int n = sc.nextInt();
 
         DocumentViewer documentViewer = new DocumentViewer();
 
-        for (int i = 0; i < n; i++) {
-            String id = sc.next();
-            int numLines = sc.nextInt();
-            sc.nextLine();
 
-            for (int j = 0; j < numLines; j++) {
+        Scanner sc = new Scanner(System.in);
+        int numDocs = sc.nextInt();
+        sc.nextLine();
+        for (int i = 0; i < numDocs; i++) {
+            String id = sc.nextLine();
+            int rows = sc.nextInt();
+            sc.nextLine();
+            for (int j = 0; j < rows; j++) {
                 String text = sc.nextLine();
                 documentViewer.addDocument(id, text);
             }
@@ -113,6 +107,7 @@ public class DocumentViewerTest {
             String[] parts = line.split("\\s+");
             String decision = parts[0];
             String id = parts[1];
+
             switch (decision) {
                 case "enableLineNumbers":
                     documentViewer.enableLineNumbers(id);
@@ -121,10 +116,7 @@ public class DocumentViewerTest {
                     documentViewer.enableWordCount(id);
                     break;
                 case "enableRedaction":
-                    List<String> forbiddenWords = new ArrayList<>();
-                    for (int i = 2; i < parts.length; i++) {
-                        forbiddenWords.add(parts[i]);
-                    }
+                    List<String> forbiddenWords = Arrays.asList(parts).subList(2, parts.length);
                     documentViewer.enableRedaction(id, forbiddenWords);
                     break;
                 case "display":
@@ -132,8 +124,6 @@ public class DocumentViewerTest {
                     break;
             }
         }
-
         sc.close();
-
     }
 }
